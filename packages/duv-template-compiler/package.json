@@ -1,0 +1,22 @@
+{
+  "name": "duv-template-compiler",
+  "version": "0.1.0",
+  "description": "duv template compiler for Duv",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "ssh://git@github.com:duvjs/duv.git"
+  },
+  "keywords": [
+    "vue",
+    "compiler",
+    "duv",
+    "duvjs"
+  ],
+  "author": "Andy Xu",
+  "license": "MIT",
+  "dependencies": {
+    "he": "^1.1.0",
+    "de-indent": "^1.0.2"
+  }
+}

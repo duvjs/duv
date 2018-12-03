@@ -1,0 +1,19 @@
+{
+  "name": "duvjs",
+  "version": "0.1.0",
+  "description": "Duv Runtime",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "ssh://git@github.com:duvjs/duv.git"
+  },
+  "keywords": [
+    "vue",
+    "compiler",
+    "duv",
+    "duvjs"
+  ],
+  "author": "Andy Xu",
+  "license": "MIT",
+  "homepage": "https://github.com/duvjs/duv"
+}
