@@ -6,7 +6,7 @@
   <a href="https://www.npmjs.com/package/duvjs"><img src="https://img.shields.io/npm/l/duvjs.svg" alt="License"></a>
 </p>
 
-##关于Duv 
+## 关于Duv 
 
 Duv 是一个使用Vue语法开发，自动生成多平台小程序的框架。
 
