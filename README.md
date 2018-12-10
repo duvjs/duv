@@ -1,4 +1,4 @@
-<p align="center"><a href="https://vuejs.org" target="_blank" rel="noopener noreferrer"><img width="100" src="https://vuejs.org/images/logo.png" alt="Vue logo"></a></p>
+<p align="center"><a href="https://duvjs.github.io/duvjs.org/" target="_blank" rel="noopener noreferrer"><img width="100" src="https://duvjs.github.io/duvjs.org/images/logo.png" alt="duv logo"></a></p>
 
 <p align="center">
   <a href="https://npmcharts.com/compare/duvjs?minimal=true"><img src="https://img.shields.io/npm/dm/duvjs.svg" alt="Downloads"></a>
