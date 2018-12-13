@@ -40,7 +40,26 @@ function dataProxy (v, d) {
     proxy(v, d, k)
   }
 }
-
+function propsProxy (v, d, vs) {
+  const sharedPropertyDefinition = {
+    enumerable: true,
+    configurable: true,
+    get: null,
+    set: null
+  }
+  function proxy (vSelf, dSelf, key) {
+    sharedPropertyDefinition.get = function proxyGetter () {
+        return dSelf[key]
+    }
+    sharedPropertyDefinition.set = function proxySetter (val) {
+      dSelf[key] = val
+    }
+    Object.defineProperty(vSelf, key, sharedPropertyDefinition)
+  }
+  for (let k in v) {
+    proxy(vs, d, k)
+  }
+}
 /**
  * 事件代理
  * @param vueVM
@@ -118,7 +137,7 @@ export function mountDuv (duvType, next) {
   const duv = rootVueVM.$duv
 
   duv.duvType = duvType
-  duv.status = 'register'
+  // duv.status = 'register'
 
   if (duvType === 'app') {
     global.App({
@@ -166,15 +185,19 @@ export function mountDuv (duvType, next) {
         duv.page = this
         duv.self = this
         dataProxy(vself, this)
-        callHook(rootVueVM, 'created', {a:1})
       },
       attached () {
-        duv.status = 'attached'
+        // duv.status = 'attached'
+        if(rootVueVM.$options.props) {
+          // vm.$options.props
+          propsProxy(rootVueVM.$options.props, this.properties, vself)
+        }
+        callHook(rootVueVM, 'created')
         callHook(rootVueVM, 'beforeMount')
         callHook(rootVueVM, 'attached')
       },
       ready () {
-        duv.status = 'ready'
+        // duv.status = 'ready'
         callHook(rootVueVM, 'mounted')
         callHook(rootVueVM, 'ready')
         next()
@@ -183,7 +206,7 @@ export function mountDuv (duvType, next) {
         callHook(rootVueVM, 'moved')
       },
       detached () {
-        duv.status = 'detached'
+        // duv.status = 'detached'
         callHook(rootVueVM, 'beforeDestory')
         callHook(rootVueVM, 'detached')
         callHook(rootVueVM, 'destoryed')
@@ -231,14 +254,14 @@ export function mountDuv (duvType, next) {
         duv.page = this
         duv.self = this
         duv.query = query
-        duv.status = 'load'
+        // duv.status = 'load'
         dataProxy(vself, this)
         callHook(rootVueVM, 'created', query)
         callHook(rootVueVM, 'onLoad', query)
       },
       onShow () {
         duv.page = this
-        duv.status = 'show'
+        // duv.status = 'show'
         callHook(rootVueVM, 'onShow')
       },
       onReady () {
