@@ -17,7 +17,7 @@ function dataProxy (v, d) {
   function proxy (vSelf, dSelf, key) {
     let value = vSelf[key]
     sharedPropertyDefinition.get = function proxyGetter () {
-      if(key === 'globalData') {
+      if(key === 'globalData' || key === 'triggerEvent') {
         return dSelf[key]
       } else if (dataKeys.includes(key)) {
         return dSelf.data[key]
@@ -184,6 +184,7 @@ export function mountDuv (duvType, next) {
         this.globalData = app.globalData
         duv.page = this
         duv.self = this
+        vself.triggerEvent = function () {}
         dataProxy(vself, this)
       },
       attached () {
