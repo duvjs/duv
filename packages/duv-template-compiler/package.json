@@ -1,6 +1,6 @@
 {
   "name": "duv-template-compiler",
-  "version": "0.1.2",
+  "version": "0.1.5",
   "description": "duv template compiler for Duv",
   "main": "index.js",
   "repository": {
