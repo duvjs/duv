@@ -1,5 +1,5 @@
 /* @flow */
 
-import Vue from './runtime/index'
+import Vue from './core/index'
 
 export default Vue
