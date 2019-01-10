@@ -175,19 +175,23 @@ function vevent (k, v, attrs, tag, attrsMap) {
       // 事件捕获
       if (paramArr.includes('stop')) {
         attrs['capture-catch:' + xmlEventName] = '_captureCatchEventProxy'
-        attrs['data-event-capture-catch-' + xmlEventName] = v
+        // data-event-capture-catch
+        attrs['data-e-c-c-' + xmlEventName] = v
       } else {
         attrs['capture-bind:' + xmlEventName] = '_captureBindEventProxy'
-        attrs['data-event-capture-bind-' + xmlEventName] = v
+        // data-event-capture-bind
+        attrs['data-e-c-b-' + xmlEventName] = v
       }
     } else {
       // 事件冒泡
       if (paramArr.includes('stop')) {
         attrs['catch' + xmlEventName] = '_catchEventProxy'
-        attrs['data-event-catch-' + xmlEventName] = v
+        // data-event-catch
+        attrs['data-e-c-' + xmlEventName] = v
       } else {
         attrs['bind' + xmlEventName] = '_bindEventProxy'
-        attrs['data-event-bind-' + xmlEventName] = v
+        // data-event-bind
+        attrs['data-e-b-' + xmlEventName] = v
       }
     }
   }

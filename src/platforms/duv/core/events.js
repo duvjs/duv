@@ -9,6 +9,11 @@ export function initEvents () {
       duvEvent.call(this, getWebEventByDUV(e))
     }
   }
+  Vue.prototype.$emit = function (eventName, params, opt) {
+    if (this.$duv.self.triggerEvent === 'function') {
+      this.$duv.self.triggerEvent(eventName, params, opt||{})
+    }
+  }
 }
 function getWebEventByDUV (e) {
   const { type, timeStamp, touches, detail = {}, target = {}, currentTarget = {}} = e

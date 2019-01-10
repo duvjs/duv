@@ -82,16 +82,16 @@ function mountPage(vm) {
       }
     },
     _captureCatchEventProxy (e) {
-      duvEventProxy(vm, 'eventCaptureCatch', e)
+      duvEventProxy(vm, 'eCC', e)
     },
     _captureBindEventProxy (e) {
-      duvEventProxy(vm, 'eventCaptureBind', e)
+      duvEventProxy(vm, 'eCB', e)
     },
     _catchEventProxy (e) {
-      duvEventProxy(vm, 'eventCatch', e)
+      duvEventProxy(vm, 'eC', e)
     },
     _bindEventProxy (e) {
-      duvEventProxy(vm, 'eventBind', e)
+      duvEventProxy(vm, 'eB', e)
     },
     onLoad (query) {
       this.globalData = app.globalData
@@ -151,16 +151,16 @@ function mountComponent(vm) {
     data: vm._data,
     methods: {
       _captureCatchEventProxy (e) {
-        duvEventProxy(vm, 'eventCaptureCatch', e)
+        duvEventProxy(vm, 'eCC', e)
       },
       _captureBindEventProxy (e) {
-        duvEventProxy(vm, 'eventCaptureBind', e)
+        duvEventProxy(vm, 'eCB', e)
       },
       _catchEventProxy (e) {
-        duvEventProxy(vm, 'eventCatch', e)
+        duvEventProxy(vm, 'eC', e)
       },
       _bindEventProxy (e) {
-        duvEventProxy(vm, 'eventBind', e)
+        duvEventProxy(vm, 'eB', e)
       }
     },
     created () {
@@ -217,7 +217,7 @@ function initState (vm) {
 
 }
 function initDuvGlobalApi (vm) {
-  let arr = ['globalData', 'triggerEvent']
+  let arr = ['globalData']
   for(let i =0, len = arr.length; i < len; i++) {
     proxyDuvGlobalApi(vm, arr[i])
   }
