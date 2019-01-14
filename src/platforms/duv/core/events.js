@@ -1,4 +1,4 @@
-import { noop } from '../core/util'
+import { noop } from './util'
 import Vue from "./index";
 
 export function initEvents () {
