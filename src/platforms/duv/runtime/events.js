@@ -1,4 +1,4 @@
-import { noop } from 'shared/util'
+import { noop } from './util'
 function getWebEventByDUV (e) {
   const { type, timeStamp, touches, detail = {}, target = {}, currentTarget = {}} = e
   const { x, y } = detail
@@ -21,10 +21,17 @@ function getWebEventByDUV (e) {
   return event
 }
 
-export function handleDuvEvent (e, eventName) {
-  const rootVueVM = this.$root
-  if (rootVueVM.$options && rootVueVM.$options.methods && rootVueVM.$options.methods[eventName]) {
-    let duvEvent = rootVueVM.$options.methods[eventName]
-    duvEvent.call(this, getWebEventByDUV(e))
+export function initEvents (Vue) {
+  Vue.prototype._handleDuvEvent = function (e, eventName) {
+    const rootVueVM = this;
+    if (rootVueVM.$options && rootVueVM.$options.methods && rootVueVM.$options.methods[eventName]) {
+      let duvEvent = rootVueVM.$options.methods[eventName]
+      duvEvent.call(this, getWebEventByDUV(e))
+    }
   }
+  Vue.prototype.$emit = function (eventName, params, opt) {
+    if (this.$duv.self.triggerEvent === 'function') {
+      this.$duv.self.triggerEvent(eventName, params, opt||{});
+    }
+  };
 }

@@ -1,64 +1,68 @@
-import { handleError } from 'core/util/index'
+import { noop, isReserved, hasOwn, callHook } from "./util";
 
-/**
- * 数据代理
- * @param v
- * @param d
- */
-function dataProxy (v, d) {
-  const sharedPropertyDefinition = {
-    enumerable: true,
-    configurable: true,
-    get: null,
-    set: null
+let sharedPropertyDefinition = {
+  enumerable: true,
+  configurable: true,
+  get: noop,
+  set: noop
+};
+
+function initState (vm) {
+  let opts = vm.$options;
+  if (opts.props) {
+    initProps(vm, opts.props);
   }
-  if(!v.globalData) v.globalData = {}
-  let dataKeys = Object.keys(v._data || {})
-  function proxy (vSelf, dSelf, key) {
-    let value = vSelf[key]
-    sharedPropertyDefinition.get = function proxyGetter () {
-      if(key === 'globalData' || key === 'triggerEvent') {
-        return dSelf[key]
-      } else if (dataKeys.includes(key)) {
-        return dSelf.data[key]
-      } else {
-        return value
-      }
-    }
-    sharedPropertyDefinition.set = function proxySetter (val) {
-      if (dataKeys.includes(key)) {
-        let sdata = {}
-        sdata[key] = val
-        dSelf.setData(sdata)
-      } else {
-        value = val
-      }
-    }
-    Object.defineProperty(vSelf, key, sharedPropertyDefinition)
+  if (opts.data) {
+    initData(vm);
   }
-  for (let k in v) {
-    proxy(v, d, k)
+  initDuvGlobalApi(vm);
+
+}
+function initProps (vm, props) {
+  for (let key in props) {
+    if (!(key in vm)) {
+      proxy(vm, "data", key);
+    }
   }
 }
-function propsProxy (v, d, vs) {
-  const sharedPropertyDefinition = {
-    enumerable: true,
-    configurable: true,
-    get: null,
-    set: null
+function proxyDuvGlobalApi (target, key) {
+  sharedPropertyDefinition.get = function proxyGetter () {
+    return this['$duv']['self'][key]
+  };
+  sharedPropertyDefinition.set = function proxySetter (val) {
+    this['$duv']['self'][key] = val;
+  };
+  Object.defineProperty(target, key, sharedPropertyDefinition);
+}
+function initDuvGlobalApi (vm) {
+  let arr = ['globalData'];
+  for(let i =0, len = arr.length; i < len; i++) {
+    proxyDuvGlobalApi(vm, arr[i]);
   }
-  function proxy (vSelf, dSelf, key) {
-    sharedPropertyDefinition.get = function proxyGetter () {
-        return dSelf[key]
+}
+function initData (vm) {
+  let data = vm._data;
+  let keys = Object.keys(data);
+  let props = vm.$options.props;
+  // let methods = vm.$options.methods;
+  let i = keys.length;
+  while (i--) {
+    let key = keys[i];
+    if (props && hasOwn(props, key)) ; else if (!isReserved(key)) {
+      proxy(vm, "data", key);
     }
-    sharedPropertyDefinition.set = function proxySetter (val) {
-      dSelf[key] = val
-    }
-    Object.defineProperty(vSelf, key, sharedPropertyDefinition)
   }
-  for (let k in v) {
-    proxy(vs, d, k)
-  }
+}
+function proxy (target, sourceKey, key) {
+  sharedPropertyDefinition.get = function proxyGetter () {
+    return this['$duv']['self'][sourceKey][key]
+  };
+  sharedPropertyDefinition.set = function proxySetter (val) {
+    let temp = {};
+    temp[key] = val;
+    this['$duv']['self'].setData(temp);
+  };
+  Object.defineProperty(target, key, sharedPropertyDefinition);
 }
 /**
  * 事件代理
@@ -80,25 +84,6 @@ function duvEventProxy (vueVM, eventType, e) {
 }
 
 /**
- * 小程序生命周期挂载
- * @param vm
- * @param hook
- * @param params
- */
-export function callHook (vm, hook, params) {
-  let handlers = vm.$options[hook]
-  if (handlers) {
-    for (let i = 0, j = handlers.length; i < j; i++) {
-      try {
-        handlers[i].call(vm, params)
-      } catch (e) {
-        handleError(e, vm, `${hook} hook`)
-      }
-    }
-  }
-}
-
-/**
  * 转换vue组件props =》 properties
  * @param vm
  */
@@ -113,8 +98,9 @@ function convertProps (vm) {
     if(alowTypes.includes(value)) {
       properties[key] = value
     } else if (value instanceof Array) {
-      // 数组类型
-      // todo
+      for (let i = 0, len = value.length; i < len; i++) {
+        properties[value[i]] = null;
+      }
     } else if (value instanceof Object) {
       // 默认值default 不能是function
       let property = {}
@@ -129,175 +115,173 @@ function convertProps (vm) {
 
   return properties
 }
-export function mountDuv (duvType, next) {
-  const vself = this;
-  const rootVueVM = this.$root
 
-  rootVueVM.$duv = {}
-  const duv = rootVueVM.$duv
-
-  duv.duvType = duvType
-  // duv.status = 'register'
-
-  if (duvType === 'app') {
-    global.App({
-      globalData: rootVueVM.$options.globalData||{},
-      onLaunch (options = {}) {
-        duv.app = this
-        duv.self = this
-        dataProxy(rootVueVM, this)
-        callHook(rootVueVM, 'created', options)
-        callHook(rootVueVM, 'onLaunch', options)
-        next()
-      },
-      onShow (options = {}) {
-        callHook(rootVueVM, 'onShow', options)
-      },
-      onHide () {
-        callHook(rootVueVM, 'onHide')
-      },
-      onError (err) {
-        callHook(rootVueVM, 'onError', err)
-      }
-    })
-  } else if (duvType === 'component') {
-    const app = global.getApp()
-    global.Component({
-      // 小程序原生的组件属性
-      properties: convertProps(rootVueVM),
-      data: rootVueVM._data,
-      methods: {
-        _captureCatchEventProxy (e) {
-          duvEventProxy(rootVueVM, 'eventCaptureCatch', e)
-        },
-        _captureBindEventProxy (e) {
-          duvEventProxy(rootVueVM, 'eventCaptureBind', e)
-        },
-        _catchEventProxy (e) {
-          duvEventProxy(rootVueVM, 'eventCatch', e)
-        },
-        _bindEventProxy (e) {
-          duvEventProxy(rootVueVM, 'eventBind', e)
-        }
-      },
-      created () {
-        this.globalData = app.globalData
-        duv.page = this
-        duv.self = this
-        vself.triggerEvent = function () {}
-        dataProxy(vself, this)
-      },
-      attached () {
-        // duv.status = 'attached'
-        if(rootVueVM.$options.props) {
-          // vm.$options.props
-          propsProxy(rootVueVM.$options.props, this.properties, vself)
-        }
-        callHook(rootVueVM, 'created')
-        callHook(rootVueVM, 'beforeMount')
-        callHook(rootVueVM, 'attached')
-      },
-      ready () {
-        // duv.status = 'ready'
-        callHook(rootVueVM, 'mounted')
-        callHook(rootVueVM, 'ready')
-        next()
-      },
-      moved () {
-        callHook(rootVueVM, 'moved')
-      },
-      detached () {
-        // duv.status = 'detached'
-        callHook(rootVueVM, 'beforeDestory')
-        callHook(rootVueVM, 'detached')
-        callHook(rootVueVM, 'destoryed')
-      },
-      pageLifetimes: {
-        show: function () {
-          callHook(rootVueVM, 'onShow')
-        },
-        hide: function () {
-          callHook(rootVueVM, 'onHide')
-        },
-        resize: function () {
-          callHook(rootVueVM, 'onResize')
-        },
-      },
-    })
-  } else {
-    const app = global.getApp()
-    global.Page({
-      // 页面的初始数据
-      data: rootVueVM._data,
-      _modelEventProxy (e) {
-        let dataSet = e.currentTarget.dataset||{}
-        let modelText = dataSet['modelText']
-        if(modelText) {
-          let mData = {}
-          mData[modelText] =  e.detail.value
-          this.setData(mData)
-        }
-      },
-      _captureCatchEventProxy (e) {
-        duvEventProxy(rootVueVM, 'eventCaptureCatch', e)
-      },
-      _captureBindEventProxy (e) {
-        duvEventProxy(rootVueVM, 'eventCaptureBind', e)
-      },
-      _catchEventProxy (e) {
-        duvEventProxy(rootVueVM, 'eventCatch', e)
-      },
-      _bindEventProxy (e) {
-        duvEventProxy(rootVueVM, 'eventBind', e)
-      },
-      onLoad (query) {
-        this.globalData = app.globalData
-        duv.page = this
-        duv.self = this
-        duv.query = query
-        // duv.status = 'load'
-        dataProxy(vself, this)
-        callHook(rootVueVM, 'created', query)
-        callHook(rootVueVM, 'onLoad', query)
-      },
-      onShow () {
-        duv.page = this
-        // duv.status = 'show'
-        callHook(rootVueVM, 'onShow')
-      },
-      onReady () {
-        callHook(rootVueVM, 'beforeMount')
-        callHook(rootVueVM, 'onReady')
-        callHook(rootVueVM, 'mounted')
-        next()
-      },
-      onHide () {
-        callHook(rootVueVM, 'onHide')
-        duv.page = null
-      },
-      onUnload () {
-        callHook(rootVueVM, 'beforeDestory')
-        callHook(rootVueVM, 'onUnload')
-        callHook(rootVueVM, 'destoryed')
-        duv.page = null
-      },
-      onPullDownRefresh () {
-        callHook(rootVueVM, 'onPullDownRefresh')
-      },
-      onReachBottom () {
-        callHook(rootVueVM, 'onReachBottom')
-      },
-      onShareAppMessage: rootVueVM.$options.onShareAppMessage
-        ? options => callHook(rootVueVM, 'onShareAppMessage', options) : null,
-      onPageScroll (options) {
-        callHook(rootVueVM, 'onPageScroll', options)
-      },
-      onResize (options) {
-        callHook(rootVueVM, 'onResize', options)
-      },
-      onTabItemTap (options) {
-        callHook(rootVueVM, 'onTabItemTap', options)
-      }
-    })
+export function mountDuv (duvType) {
+  let vm = this;
+  let duv = vm.$duv = {};
+  duv.duvType = duvType;
+  switch (duvType) {
+    case 'app':
+      mountApp(vm);
+      break;
+    case 'component':
+      mountComponent(vm);
+      break;
+    case 'page':
+      mountPage(vm);
+      break;
+    default:
+      mountPage(vm);
+      break;
   }
+}
+function mountApp(vm) {
+  global.App({
+    globalData: vm.$options.globalData||{},
+    onLaunch: function onLaunch (options) {
+      if ( options === void 0 ) options = {};
+      vm.$duv.self = this;
+      initState(vm);
+      callHook(vm, 'created', options);
+      callHook(vm, 'onLaunch', options);
+    },
+    onShow: function onShow (options) {
+      if ( options === void 0 ) options = {};
+
+      callHook(vm, 'onShow', options);
+    },
+    onHide: function onHide () {
+      callHook(vm, 'onHide');
+    },
+    onError: function onError (err) {
+      callHook(vm, 'onError', err);
+    }
+  });
+}
+function mountComponent(vm) {
+  // const app = global.getApp()
+  global.Component({
+    // 小程序原生的组件属性
+    properties: convertProps(vm),
+    data: vm._data,
+    methods: {
+      _captureCatchEventProxy: function _captureCatchEventProxy (e) {
+        duvEventProxy(vm, 'eCC', e);
+      },
+      _captureBindEventProxy: function _captureBindEventProxy (e) {
+        duvEventProxy(vm, 'eCB', e);
+      },
+      _catchEventProxy: function _catchEventProxy (e) {
+        duvEventProxy(vm, 'eC', e);
+      },
+      _bindEventProxy: function _bindEventProxy (e) {
+        duvEventProxy(vm, 'eB', e);
+      }
+    },
+    created: function created () {
+      vm.$duv.self = this;
+      initState(vm);
+    },
+    attached: function attached () {
+      // duv.status = 'attached'
+      if(vm.$options.props) ;
+      callHook(vm, 'created');
+      callHook(vm, 'beforeMount');
+      callHook(vm, 'attached');
+    },
+    ready: function ready () {
+      // duv.status = 'ready'
+      callHook(vm, 'mounted');
+      callHook(vm, 'ready');
+    },
+    moved: function moved () {
+      callHook(vm, 'moved');
+    },
+    detached: function detached () {
+      // duv.status = 'detached'
+      callHook(vm, 'beforeDestory');
+      callHook(vm, 'detached');
+      callHook(vm, 'destoryed');
+    },
+    pageLifetimes: {
+      show: function () {
+        callHook(vm, 'onShow');
+      },
+      hide: function () {
+        callHook(vm, 'onHide');
+      },
+      resize: function () {
+        callHook(vm, 'onResize');
+      },
+    },
+  });
+}
+function mountPage(vm) {
+  let app = global.getApp();
+  global.Page({
+    // 页面的初始数据
+    data: vm._data,
+    _modelEventProxy: function _modelEventProxy (e) {
+      let dataSet = e.currentTarget.dataset||{};
+      let modelText = dataSet['modelText'];
+      if(modelText) {
+        let mData = {};
+        mData[modelText] =  e.detail.value;
+        this.setData(mData);
+      }
+    },
+    _captureCatchEventProxy: function _captureCatchEventProxy (e) {
+      duvEventProxy(vm, 'eCC', e);
+    },
+    _captureBindEventProxy: function _captureBindEventProxy (e) {
+      duvEventProxy(vm, 'eCB', e);
+    },
+    _catchEventProxy: function _catchEventProxy (e) {
+      duvEventProxy(vm, 'eC', e);
+    },
+    _bindEventProxy: function _bindEventProxy (e) {
+      duvEventProxy(vm, 'eB', e);
+    },
+    onLoad: function onLoad (query) {
+      this.globalData = app.globalData;
+      vm.$duv.self = this;
+      vm.$duv.query = query;
+      initState(vm);
+      callHook(vm, 'created', query);
+      callHook(vm, 'onLoad', query);
+    },
+    onShow: function onShow () {
+      callHook(vm, 'onShow');
+    },
+    onReady: function onReady () {
+      callHook(vm, 'beforeMount');
+      callHook(vm, 'onReady');
+      callHook(vm, 'mounted');
+    },
+    onHide: function onHide () {
+      callHook(vm, 'onHide');
+    },
+    onUnload: function onUnload () {
+      callHook(vm, 'beforeDestory');
+      callHook(vm, 'onUnload');
+      callHook(vm, 'destoryed');
+    },
+    onPullDownRefresh: function onPullDownRefresh () {
+      callHook(vm, 'onPullDownRefresh');
+    },
+    onReachBottom: function onReachBottom () {
+      callHook(vm, 'onReachBottom');
+    },
+    onShareAppMessage: vm.$options.onShareAppMessage
+      ? function (options) { return callHook(vm, 'onShareAppMessage', options); } : null,
+    onPageScroll: function onPageScroll (options) {
+      callHook(vm, 'onPageScroll', options);
+    },
+    onResize: function onResize (options) {
+      callHook(vm, 'onResize', options);
+    },
+    onTabItemTap: function onTabItemTap (options) {
+      callHook(vm, 'onTabItemTap', options);
+    }
+  });
 }
